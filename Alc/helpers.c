@@ -99,7 +99,9 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef __wii__
 #include <sys/mman.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #elif defined(_WIN32_IE)
@@ -741,6 +743,8 @@ void UnmapFileMem(const struct FileMapping *mapping)
 
 void GetProcBinary(al_string *path, al_string *fname)
 {
+#ifdef __wii__
+#else
     char *pathname = NULL;
     size_t pathlen;
 
@@ -815,6 +819,7 @@ void GetProcBinary(al_string *path, al_string *fname)
         TRACE("Got: %s, %s\n", alstr_get_cstr(*path), alstr_get_cstr(*fname));
     else if(path) TRACE("Got path: %s\n", alstr_get_cstr(*path));
     else if(fname) TRACE("Got filename: %s\n", alstr_get_cstr(*fname));
+#endif
 }
 
 
@@ -1003,6 +1008,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
 struct FileMapping MapFileToMem(const char *fname)
 {
     struct FileMapping ret = { -1, NULL, 0 };
+#ifndef __wii__
     struct stat sbuf;
     void *ptr;
     int fd;
@@ -1031,13 +1037,16 @@ struct FileMapping MapFileToMem(const char *fname)
     ret.fd = fd;
     ret.ptr = ptr;
     ret.len = sbuf.st_size;
+#endif
     return ret;
 }
 
 void UnmapFileMem(const struct FileMapping *mapping)
 {
+#ifndef __wii__
     munmap(mapping->ptr, mapping->len);
     close(mapping->fd);
+#endif
 }
 
 #endif

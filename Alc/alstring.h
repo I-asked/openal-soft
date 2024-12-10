@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+extern char *strdup (const char *);
+
 #include "vector.h"
 
 

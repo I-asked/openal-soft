@@ -4,6 +4,14 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
 
 PROJECT(OpenAL)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "NintendoWii")
+    set(Wii TRUE)
+    set(NOT_Wii FALSE)
+else()
+    set(Wii FALSE)
+    set(NOT_Wii TRUE)
+endif()
+
 IF(COMMAND CMAKE_POLICY)
     CMAKE_POLICY(SET CMP0003 NEW)
     CMAKE_POLICY(SET CMP0005 NEW)
@@ -37,19 +45,19 @@ include(GNUInstallDirs)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
+OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ${NOT_Wii})
 
 OPTION(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
 
-OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
+OPTION(ALSOFT_UTILS          "Build and install utility programs"         ${NOT_Wii})
 OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
-OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
-OPTION(ALSOFT_TESTS     "Build and install test programs"     ON)
+OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ${NOT_Wii})
+OPTION(ALSOFT_TESTS     "Build and install test programs"     ${NOT_Wii})
 
-OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
-OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
-OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
+OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ${NOT_Wii})
+OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ${NOT_Wii})
+OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ${NOT_Wii})
 OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
 if(DEFINED SHARE_INSTALL_DIR)
@@ -98,7 +106,11 @@ IF ("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
 ENDIF()
 
 IF(NOT LIBTYPE)
-    SET(LIBTYPE SHARED)
+    IF(Wii)
+        SET(LIBTYPE STATIC)
+    ELSE()
+        SET(LIBTYPE SHARED)
+    ENDIF()
 ENDIF()
 
 SET(LIB_MAJOR_VERSION "1")
@@ -1125,11 +1137,11 @@ IF(ALSOFT_REQUIRE_OPENSL AND NOT HAVE_OPENSL)
 ENDIF()
 
 # Check for SDL2 backend
-OPTION(ALSOFT_REQUIRE_SDL2 "Require SDL2 backend" OFF)
+OPTION(ALSOFT_REQUIRE_SDL2 "Require SDL2 backend" ${Wii})
 FIND_PACKAGE(SDL2)
 IF(SDL2_FOUND)
     # Off by default, since it adds a runtime dependency
-    OPTION(ALSOFT_BACKEND_SDL2 "Enable SDL2 backend" OFF)
+    OPTION(ALSOFT_BACKEND_SDL2 "Enable SDL2 backend" ${Wii})
     IF(ALSOFT_BACKEND_SDL2)
         SET(HAVE_SDL2 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/sdl2.c)

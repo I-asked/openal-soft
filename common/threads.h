@@ -134,10 +134,17 @@ typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 typedef pthread_cond_t alcnd_t;
 typedef sem_t alsem_t;
+#ifdef __wii__
+typedef unsigned altss_t;
+typedef unsigned alonce_flag;
+
+#define AL_ONCE_FLAG_INIT 0
+#else
 typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
 #define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#endif
 
 
 inline althrd_t althrd_current(void)
@@ -154,6 +161,13 @@ inline void althrd_exit(int res)
 {
     pthread_exit((void*)(intptr_t)res);
 }
+
+#ifdef __wii__
+
+extern void __lwp_thread_yield();
+#define sched_yield __lwp_thread_yield
+
+#endif
 
 inline void althrd_yield(void)
 {
@@ -198,6 +212,65 @@ inline int almtx_trylock(almtx_t *mtx)
 }
 
 
+#ifdef __wii__
+
+extern struct TlsList {
+    int flag;
+    pthread_t thd;
+    altss_t key;
+    void *val;
+    struct TlsList *tail;
+} tls_list_head;
+
+inline void *altss_get(altss_t tss_id)
+{
+    struct TlsList *cell = &tls_list_head;
+    do {
+        if (cell->key == tss_id && cell->thd == pthread_self()) {
+            return cell->val;
+        }
+    } while ((cell = cell->tail)) ;
+    return NULL;
+}
+
+inline int altss_set(altss_t tss_id, void *val)
+{
+    struct TlsList *cell = &tls_list_head;
+    while (cell->tail) {
+        if (cell->key == tss_id && cell->thd == pthread_self()) {
+            goto set;
+        }
+        cell = cell->tail;
+    }
+    cell->tail = calloc(1, sizeof(struct TlsList));
+    cell->thd = pthread_self();
+    cell->key = tss_id;
+set:
+    cell->val = val;
+    return althrd_success;
+}
+
+
+inline void alcall_once(alonce_flag *once, void (*callback)(void))
+{
+    struct TlsList *cell = &tls_list_head;
+    while (cell->tail) {
+        if (cell->flag && cell->thd == pthread_self()) {
+            return;
+        }
+        cell = cell->tail;
+    }
+    cell->tail = calloc(1, sizeof(struct TlsList));
+    cell->thd = pthread_self();
+    cell->key = 0;
+    cell->val = NULL;
+    cell->flag = 1;
+
+    callback();
+}
+
+#else
+
 inline void *altss_get(altss_t tss_id)
 {
     return pthread_getspecific(tss_id);
@@ -215,6 +288,8 @@ inline void alcall_once(alonce_flag *once, void (*callback)(void))
 {
     pthread_once(once, callback);
 }
+
+#endif
 
 #endif
 

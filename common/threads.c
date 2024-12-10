@@ -423,6 +423,7 @@ void altss_delete(altss_t tss_id)
 }
 
 
+
 int altimespec_get(struct timespec *ts, int base)
 {
     static_assert(sizeof(FILETIME) == sizeof(ULARGE_INTEGER),
@@ -513,6 +514,7 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
     cntr = malloc(sizeof(*cntr));
     if(!cntr) return althrd_nomem;
 
+#ifndef __wii__
     if(pthread_attr_init(&attr) != 0)
     {
         free(cntr);
@@ -525,15 +527,19 @@ retry_stacksize:
         free(cntr);
         return althrd_error;
     }
+#endif
 
     cntr->func = func;
     cntr->arg = arg;
     if((err=pthread_create(thr, &attr, althrd_starter, cntr)) == 0)
     {
+#ifndef __wii__
         pthread_attr_destroy(&attr);
+#endif
         return althrd_success;
     }
 
+#ifndef __wii__
     if(err == EINVAL)
     {
         /* If an invalid stack size, try increasing it (limit x4, 8MB). */
@@ -542,14 +548,19 @@ retry_stacksize:
             stackmult *= 2;
             goto retry_stacksize;
         }
+#endif
         /* If still nothing, try defaults and hope they're good enough. */
         if(pthread_create(thr, NULL, althrd_starter, cntr) == 0)
         {
+#ifndef __wii__
             pthread_attr_destroy(&attr);
+#endif
             return althrd_success;
         }
+#ifndef __wii__
     }
     pthread_attr_destroy(&attr);
+#endif
     free(cntr);
     return althrd_error;
 }
@@ -587,6 +598,7 @@ int almtx_init(almtx_t *mtx, int type)
     {
         pthread_mutexattr_t attr;
 
+#ifndef __wii__
         ret = pthread_mutexattr_init(&attr);
         if(ret) return althrd_error;
 
@@ -600,9 +612,12 @@ int almtx_init(almtx_t *mtx, int type)
         }
         else
             ret = 1;
+#endif
         if(ret == 0)
             ret = pthread_mutex_init(mtx, &attr);
+#ifndef __wii__
         pthread_mutexattr_destroy(&attr);
+#endif
     }
     return ret ? althrd_error : althrd_success;
 }
@@ -681,6 +696,27 @@ int alsem_trywait(alsem_t *sem)
 }
 
 
+#ifdef __wii__
+
+struct TlsList list_head = { 0 };
+
+int altss_create(altss_t *tss_id, altss_dtor_t callback)
+{
+    memset(&list_head, '\0', sizeof(list_head));
+}
+
+void altss_delete(altss_t tss_id)
+{
+    struct TlsList *cell = list_head.tail;
+    while (cell) {
+      struct TlsList *tmp = cell;
+      cell = cell->tail;
+      free(tmp);
+    }
+}
+
+#else
+
 int altss_create(altss_t *tss_id, altss_dtor_t callback)
 {
     if(pthread_key_create(tss_id, callback) != 0)
@@ -692,6 +728,8 @@ void altss_delete(altss_t tss_id)
 {
     pthread_key_delete(tss_id);
 }
+
+#endif
 
 
 int altimespec_get(struct timespec *ts, int base)
