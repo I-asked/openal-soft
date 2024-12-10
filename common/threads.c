@@ -698,16 +698,16 @@ int alsem_trywait(alsem_t *sem)
 
 #ifdef __wii__
 
-struct TlsList list_head = { 0 };
+struct TlsList tls_list_head = { 0 };
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback)
 {
-    memset(&list_head, '\0', sizeof(list_head));
+    memset(&tls_list_head, '\0', sizeof(tls_list_head));
 }
 
 void altss_delete(altss_t tss_id)
 {
-    struct TlsList *cell = list_head.tail;
+    struct TlsList *cell = tls_list_head.tail;
     while (cell) {
       struct TlsList *tmp = cell;
       cell = cell->tail;
