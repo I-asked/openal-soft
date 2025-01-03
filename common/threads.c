@@ -737,7 +737,13 @@ int altimespec_get(struct timespec *ts, int base)
     if(base == AL_TIME_UTC)
     {
         int ret;
-#if _POSIX_TIMERS > 0
+#if defined(__wii__)
+        uint64_t t = gettime() / TB_TIMER_CLOCK;
+        (void)ret;
+        ts->tv_sec = t / 1000ULL;
+        ts->tv_nsec = (t - ((uint64_t)(t / 1000ULL) * 1000ULL)) * 1000ULL;
+        return base;
+#elif _POSIX_TIMERS > 0
         ret = clock_gettime(CLOCK_REALTIME, ts);
         if(ret == 0) return base;
 #else /* _POSIX_TIMERS > 0 */
